@@ -58,9 +58,6 @@ function defaultrepr(x; smethod=false)
     end
 end
 
-# This function must be implemented for all menu types. It defines what
-#   happens when a user presses the Enter key while the menu is open.
-# If this function returns true, `request()` will exit.
 function pick(t::Tree, currentItem)
     if currentItem isa Tree
         toggle(currentItem)
@@ -69,19 +66,12 @@ function pick(t::Tree, currentItem)
     return false
 end
 
-# NECESSARY FUNCTIONS
-# These functions must be implemented for all subtypes of AbstractMenu
-######################################################################
+macro ishow(x)
+    :(ishow($(esc(x))))
+end
 
-# This function must be implemented for all menu types. It defines what
-#   happends when a user cancels ('q' or ctrl-c) a menu. `request()` will
-#   always exit after calling this function.
-cancel(t::Tree) = nothing
-
-# This function must be implemented for all menu types. It should return
-#   a list of strings to be displayed as options in the current page.
-function options(t::Tree)
-    fill("", length(t.children))
+function ishow(x)
+    request(defaultrepr(x))
 end
 
 const INDENTSIZE = 2
@@ -98,7 +88,7 @@ function printTreeChild(buf::IOBuffer, child::Tree, cursor, term_width::Int; lev
     if child.expanded
         # print Tree with additional nesting, but without an active cursor
         # init=true assures that the Tree printing doesn't mess with anything
-        cursor = printMenu′(buf, child, cursor; init=true, level = level)
+        cursor = printMenu(buf, child, cursor; init=true, level = level)
     else
         # only print header
         tb = IOBuffer()
@@ -107,26 +97,6 @@ function printTreeChild(buf::IOBuffer, child::Tree, cursor, term_width::Int; lev
     end
 
     cursor
-end
-
-macro ishow(x)
-    :(ishow($(esc(x))))
-end
-
-function ishow(x)
-    # t = if showmethod(typeof(x)) ≠ showmethod(Any)
-    #     b = IOBuffer()
-    #     print(b, Text(io -> show(IOContext(io, limit = true), MIME"text/plain"(), x)))
-    #     strs = split(String(take!(b)), '\n')
-    #     if length(strs) > 1
-    #         Tree(strs[1], [Text(join(strs[2:end], '\n'))])
-    #     else
-    #         Tree(strs[1], [])
-    #     end
-    # else
-    #     defaultrepr(x)
-    # end
-    request(defaultrepr(x))
 end
 
 function limitLineLength(strs, term_width)
@@ -183,17 +153,9 @@ function writeChild(buf::IOBuffer, t::Tree, idx::Int, cursor, term_width::Int; l
     cursor
 end
 
-
-# OPTIONAL FUNCTIONS
-# These functions do not need to be implemented for all Menu types
-##################################################################
-
-
-# If `header()` is defined for a specific menu type, display the header
-#  above the menu when it is rendered to the screen.
 header(t::Tree) = ""
 
-function printMenu′(out, m::Tree, cursor; init::Bool=false, level=0)
+function printMenu(out, m::Tree, cursor; init::Bool=false, level=0)
     buf = IOBuffer()
 
     if init
@@ -229,25 +191,7 @@ function printMenu′(out, m::Tree, cursor; init::Bool=false, level=0)
     cursor
 end
 
-function findItem(t::Tree, cursor; )
-    i = nothing
-    for c in t.children
-        if cursor == 0
-            return c, cursor
-        end
-
-        cursor -= 1
-
-        if c isa Tree && c.expanded
-            i, cursor = findItem(c, cursor)
-        end
-
-        if i ≠ nothing
-            return i, cursor
-        end
-    end
-    return i, cursor
-end
+cancel(t::Tree) = nothing
 
 request(m::Tree) = request(terminal, m)
 
@@ -259,7 +203,7 @@ function request(term::REPL.Terminals.TTYTerminal, m::Tree)
         println(term.out_stream, menu_header)
     end
 
-    printMenu′(term.out_stream, m, cursor, init=true)
+    printMenu(term.out_stream, m, cursor, init=true)
 
     raw_mode_enabled = enableRawMode(term)
     raw_mode_enabled && print(term.out_stream, "\x1b[?25l") # hide the cursor
@@ -289,7 +233,7 @@ function request(term::REPL.Terminals.TTYTerminal, m::Tree)
                 keypress(m, c) && break
             end
 
-            printMenu′(term.out_stream, m, cursor)
+            printMenu(term.out_stream, m, cursor)
         end
     finally
         # always disable raw mode even even if there is an
@@ -304,6 +248,26 @@ function request(term::REPL.Terminals.TTYTerminal, m::Tree)
     return m.selected
 end
 
+function findItem(t::Tree, cursor)
+    i = nothing
+    for c in t.children
+        if cursor == 0
+            return c, cursor
+        end
+
+        cursor -= 1
+
+        if c isa Tree && c.expanded
+            i, cursor = findItem(c, cursor)
+        end
+
+        if i ≠ nothing
+            return i, cursor
+        end
+    end
+    return i, cursor
+end
+
 function toggleall(t::Tree, expand)
     for child in t.children
         if child isa Tree
@@ -312,7 +276,6 @@ function toggleall(t::Tree, expand)
         end
     end
 end
-
 
 function keypress(t::Tree, key::UInt32)
     if key == UInt32('e') || key == UInt32('E')
