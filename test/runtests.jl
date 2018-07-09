@@ -20,7 +20,6 @@ TreeViews.hastreeview(x::TVT_default) = true
 @test sprint(io -> treelabel(io, teststruct, 3)) == "c"
 @test treenode(teststruct, 3) == teststruct.c
 
-
 # customization
 struct TVT_customized
     a
@@ -50,3 +49,5 @@ end
 @test sprint(io -> treelabel(io, teststruct, 2)) == "customized2"
 @test treenode(teststruct, 1) == teststruct.a
 @test treenode(teststruct, 2) == TVT_default(teststruct.b, teststruct.c, teststruct.c, teststruct.d)
+
+include("repl/renderer.jl")
