@@ -14,10 +14,12 @@ end
 
 export @ishow
 
-mutable struct Tree
+mutable struct Tree{F}
     head
+    children_gen::F
     children::Vector{Any}
 
+    materialized::Bool
     expanded::Bool
     options::Vector{String}
 
@@ -30,9 +32,23 @@ mutable struct Tree
     cursor
 end
 
+function Tree(head, children::Vector{<:Any})
+    Tree(head, () -> (), children, true, false, String[], length(children), 0, nothing, 0, 0)
+end
 
-function Tree(head, children)
-    Tree(head, children, false, [], length(children), 0, nothing, 0, 0)
+function Tree(head, f::Function)
+    Tree(head, f, Any[], false, false, String[], length(f()), 0, nothing, 0, 0)
+end
+
+function children(t::Tree)
+    if t.materialized
+        t.children
+    else
+        tmp = t.children_gen()
+        t.children = tmp
+        t.materialized = true
+        tmp
+    end
 end
 
 toggle(t::Tree) = (t.expanded = !t.expanded)
@@ -58,12 +74,30 @@ function defaultrepr(x; smethod=false)
     end
 end
 
-function pick(t::Tree, currentItem)
-    if currentItem isa Tree
-        toggle(currentItem)
+function generateTreeView(x)
+    header = Text(sprint(treelabel, x, MIME"text/plain"()))
+
+    numberofnodes(x) == 0 && return Tree(header, [])
+
+    genchildren = function ()
+      children = Any[]
+      for i in 1:numberofnodes(x)
+        node = treenode(x, i)
+
+        cheader = sprint(treelabel, x, i, MIME"text/plain"())
+        if isempty(cheader)
+          push!(children, hastreeview(node) ? generateTreeView(node) : node)
+        elseif node === nothing
+          push!(children, Text(cheader))
+        else
+          # needs to be memoized so state is kept between print cycles
+          push!(children, Tree(Text(cheader), () -> [(hastreeview(node) ? generateTreeView(node) : Text(io -> show(IOContext(io, :limit => true), MIME"text/plain"(), node)))]))
+      end
+      end
+      children
     end
 
-    return false
+    return Tree(header, genchildren)
 end
 
 macro ishow(x)
@@ -71,7 +105,7 @@ macro ishow(x)
 end
 
 function ishow(x)
-    request(defaultrepr(x))
+    request(hastreeview(x) ? generateTreeView(x) : defaultrepr(x))
 end
 
 const INDENTSIZE = 2
@@ -82,7 +116,7 @@ indent(level) = "  "
 
 function printTreeChild(buf::IOBuffer, child::Tree, cursor, term_width::Int; level::Int = 0)
     cur = cursor == -1
-    symbol = length(child.children) > 0 ? child.expanded ? "▼" : "▶" : " "
+    symbol = length(children(child)) > 0 ? child.expanded ? "▼" : "▶" : " "
 
     cur ? print(buf, "[$symbol] ") : print(buf, " $symbol  ")
     if child.expanded
@@ -93,7 +127,8 @@ function printTreeChild(buf::IOBuffer, child::Tree, cursor, term_width::Int; lev
         # only print header
         tb = IOBuffer()
         print(tb, child.head)
-        print(buf, join(limitLineLength([String(take!(tb))], term_width-(2*level + 10)), '\n'))
+        s = String(take!(tb))
+        print(buf, join(limitLineLength([s], term_width-(2*level + 10)), '\n'))
     end
 
     cursor
@@ -105,7 +140,7 @@ function limitLineLength(strs, term_width)
         if length(str) >= term_width
             while length(str) >= term_width
                 push!(outstrs, str[1:term_width])
-                str = str[term_width:end]
+                str = str[max(term_width, 1):end]
             end
         else
             push!(outstrs, str)
@@ -117,7 +152,7 @@ end
 function writeChild(buf::IOBuffer, t::Tree, idx::Int, cursor, term_width::Int; level::Int = 0)
     tmpbuf = IOBuffer()
 
-    child = t.children[idx]
+    child = children(t)[idx]
 
     cursor -= 1
     cur = cursor == -1
@@ -153,8 +188,6 @@ function writeChild(buf::IOBuffer, t::Tree, idx::Int, cursor, term_width::Int; l
     cursor
 end
 
-header(t::Tree) = ""
-
 function printMenu(out, m::Tree, cursor; init::Bool=false, level=0)
     buf = IOBuffer()
 
@@ -173,8 +206,9 @@ function printMenu(out, m::Tree, cursor; init::Bool=false, level=0)
     tb = IOBuffer()
     print(tb, m.head)
     println(buf, join(limitLineLength([String(take!(tb))], term_width-(2*level + 10)), '\n'))
+    cs = children(m)
 
-    for i in 1:length(m.children)
+    for i in 1:length(cs)
         print(buf, "\x1b[2K")
 
         cursor = writeChild(buf, m, i, cursor, term_width, level=level+1)
@@ -196,12 +230,10 @@ cancel(t::Tree) = nothing
 request(m::Tree) = request(terminal, m)
 
 function request(term::REPL.Terminals.TTYTerminal, m::Tree)
-    cursor = 0
+    global mem
+    mem = Dict{Any, Any}()
 
-    menu_header = header(m)
-    if menu_header != ""
-        println(term.out_stream, menu_header)
-    end
+    cursor = 0
 
     printMenu(term.out_stream, m, cursor, init=true)
 
@@ -250,7 +282,7 @@ end
 
 function findItem(t::Tree, cursor)
     i = nothing
-    for c in t.children
+    for c in children(t)
         if cursor == 0
             return c, cursor
         end
@@ -269,7 +301,7 @@ function findItem(t::Tree, cursor)
 end
 
 function toggleall(t::Tree, expand)
-    for child in t.children
+    for child in children(t)
         if child isa Tree
             child.expanded = expand
             toggleall(child, expand)
