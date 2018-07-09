@@ -92,7 +92,7 @@ function generateTreeView(x)
         else
           # would be nicer if this were a SubTree, but works fine as is
           push!(children, Tree(Text(cheader),
-                               () -> [(hastreeview(node) ?  
+                               () -> [(hastreeview(node) ?
                                        generateTreeView(node) :
                                        Text(io -> show(IOContext(io, :limit => true), MIME"text/plain"(), node)))]))
       end
@@ -111,11 +111,9 @@ function ishow(x)
     request(hastreeview(x) ? generateTreeView(x) : defaultrepr(x))
 end
 
-const INDENTSIZE = 2
+const INDENTSIZE = 3
 
-printIndent(buf::IOBuffer, level) = print(buf, " "^(level))
-
-indent(level) = "  "
+indent(level) = " "^INDENTSIZE
 
 function printTreeChild(buf::IOBuffer, child::Tree, cursor, term_width::Int; level::Int = 0)
     cur = cursor == -1
