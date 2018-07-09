@@ -90,8 +90,11 @@ function generateTreeView(x)
         elseif node === nothing
           push!(children, Text(cheader))
         else
-          # needs to be memoized so state is kept between print cycles
-          push!(children, Tree(Text(cheader), () -> [(hastreeview(node) ? generateTreeView(node) : Text(io -> show(IOContext(io, :limit => true), MIME"text/plain"(), node)))]))
+          # would be nicer if this were a SubTree, but works fine as is
+          push!(children, Tree(Text(cheader),
+                               () -> [(hastreeview(node) ?  
+                                       generateTreeView(node) :
+                                       Text(io -> show(IOContext(io, :limit => true), MIME"text/plain"(), node)))]))
       end
       end
       children
