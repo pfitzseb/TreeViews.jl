@@ -12,7 +12,7 @@ end
 
 teststruct = TVT_default(1, "asd", UInt8(2), 22.22)
 
-TreeViews.hastreeview(x::TVT_default) = true
+hastreeview(x::TVT_default) = true
 
 @test hastreeview(teststruct) == true
 @test numberofnodes(teststruct) == 4
