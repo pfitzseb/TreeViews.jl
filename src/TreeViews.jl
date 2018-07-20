@@ -40,7 +40,4 @@ the corresponding `treelabel`.
 """
 treenode(x::T, i::Integer) where {T} = getfield(x, fieldname(T, i))
 
-# REPL display
-include("repl/renderer.jl")
-
 end # module

@@ -49,5 +49,3 @@ end
 @test sprint(io -> treelabel(io, teststruct, 2)) == "customized2"
 @test treenode(teststruct, 1) == teststruct.a
 @test treenode(teststruct, 2) == TVT_default(teststruct.b, teststruct.c, teststruct.c, teststruct.d)
-
-include("repl/renderer.jl")
