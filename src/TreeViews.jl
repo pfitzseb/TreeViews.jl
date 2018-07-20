@@ -19,7 +19,7 @@ numberofnodes(x::T) where {T} = fieldcount(T)
 """
     treelabel(io::IO, x, mime = MIME"text/plain"())
 
-Prints the `x`'s tree header to `io`.
+Prints `x`'s tree header to `io`.
 """
 treelabel(io::IO, x::T, mime::MIME"text/plain" = MIME"text/plain"()) where {T} = show(io, mime, T)
 
