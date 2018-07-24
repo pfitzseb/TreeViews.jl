@@ -1,6 +1,6 @@
 using Test
 
-import TreeViews: hastreeview, numberofnodes, treelabel, treenode
+import TreeViews: hastreeview, numberofnodes, treelabel, nodelabel, treenode
 
 # test for sane defaults
 struct TVT_default
@@ -17,7 +17,7 @@ hastreeview(x::TVT_default) = true
 @test hastreeview(teststruct) == true
 @test numberofnodes(teststruct) == 4
 @test sprint(io -> treelabel(io, teststruct)) == "TVT_default"
-@test sprint(io -> treelabel(io, teststruct, 3)) == "c"
+@test sprint(io -> nodelabel(io, teststruct, 3)) == "c"
 @test treenode(teststruct, 3) == teststruct.c
 
 # customization
@@ -34,7 +34,7 @@ hastreeview(::TVT_customized) = true
 
 numberofnodes(x::TVT_customized) = 2
 treelabel(io::IO, x::TVT_customized) = print(io, "customized")
-function treelabel(io::IO, x::TVT_customized, i::Integer)
+function nodelabel(io::IO, x::TVT_customized, i::Integer)
     i <= 2 || throw(BoundsError(x, i))
     print(io, "customized$i")
 end
@@ -45,7 +45,9 @@ end
 
 @test numberofnodes(teststruct) == 2
 @test sprint(io -> treelabel(io, teststruct)) == "customized"
-@test_throws BoundsError sprint(io -> treelabel(io, teststruct, 3))
-@test sprint(io -> treelabel(io, teststruct, 2)) == "customized2"
+@test_throws BoundsError sprint(io -> nodelabel(io, teststruct, 3))
+@test sprint(io -> nodelabel(io, teststruct, 2)) == "customized2"
 @test treenode(teststruct, 1) == teststruct.a
 @test treenode(teststruct, 2) == TVT_default(teststruct.b, teststruct.c, teststruct.c, teststruct.d)
+
+@test_deprecated treelabel(IOBuffer(), teststruct, 1)

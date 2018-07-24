@@ -24,11 +24,11 @@ Prints `x`'s tree header to `io`.
 treelabel(io::IO, x::T, mime::MIME"text/plain" = MIME"text/plain"()) where {T} = show(io, mime, T)
 
 """
-    treelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"())
+    nodelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"())
 
 Prints the label of `x`'s `i`-th child to `io`.
 """
-function treelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"()) where {T}
+function nodelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"()) where {T}
   show(io, mime, Text(String(fieldname(T, i))))
 end
 
@@ -39,5 +39,8 @@ Returns the `i`-th node of `x`, which is usually printed by the display frontend
 the corresponding `treelabel`.
 """
 treenode(x::T, i::Integer) where {T} = getfield(x, fieldname(T, i))
+
+@deprecate(treelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"()) where {T},
+           nodelabel(io, x, i, mime))
 
 end # module
