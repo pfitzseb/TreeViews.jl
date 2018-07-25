@@ -8,4 +8,4 @@ matrix:
   allow_failures:
     - julia: nightly
 notifications:
-email: false
+  email: false
