@@ -1,3 +1,5 @@
+__precompile__(true)
+
 module TreeViews
 
 """
@@ -21,16 +23,20 @@ numberofnodes(x::T) where {T} = fieldcount(T)
 
 Prints `x`'s tree header to `io`.
 """
-treelabel(io::IO, x::T, mime::MIME"text/plain" = MIME"text/plain"()) where {T} = show(io, mime, T)
+treelabel(io::IO, x::T, mime::MIME"text/plain") where {T} = show(io, mime, T)
+treelabel(io::IO, x::T, mime::AbstractString)  where {T} = treelabel(io, x, MIME(mime))
+treelabel(io::IO, x::T)  where {T} = treelabel(io, x, MIME"text/plain"())
 
 """
     nodelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"())
 
 Prints the label of `x`'s `i`-th child to `io`.
 """
-function nodelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"()) where {T}
+function nodelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain") where {T}
   show(io, mime, Text(String(fieldname(T, i))))
 end
+nodelabel(io::IO, x::T, i::Integer, mime::AbstractString)  where {T} = nodelabel(io, x, i, MIME(mime))
+nodelabel(io::IO, x::T, i::Integer)  where {T} = nodelabel(io, x, i, MIME"text/plain"())
 
 """
     treenode(x::T, i::Integer)
@@ -40,7 +46,8 @@ the corresponding `treelabel`.
 """
 treenode(x::T, i::Integer) where {T} = getfield(x, fieldname(T, i))
 
-@deprecate(treelabel(io::IO, x::T, i::Integer, mime::MIME"text/plain" = MIME"text/plain"()) where {T},
+@deprecate(treelabel(io::IO, x::T, i::Integer, mime) where {T},
            nodelabel(io, x, i, mime))
+@deprecate(treelabel(io::IO, x::T, i::Integer) where {T}, nodelabel(io, x, i))
 
 end # module
